@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Small Windows 8 Demo</title>
+
+	<style>
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+			background-image: url("./Background.png");
+			background-size: cover;
+			background-position: center;
+			background-repeat: no-repeat;
+		}
+
+		#flyout {
+			position: fixed;
+			top: 0;
+			right: -346px;
+			width: 345px;
+			height: 100%;
+			background-color: #005359;
+			border-left: 1px solid #003F44;
+			transition: right 500ms cubic-bezier(.25,.75,0.15,0.95);
+			z-index: 2;
+		}
+
+		#flyout.show {
+			right: 0;
+		}
+
+		.image-box {
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			background-color: transparent;
+			padding: 0;
+			margin: 0;
+			opacity: 0;
+			transition: opacity 0.2s ease;
+			cursor: default;
+			z-index: 3;
+		}
+
+		#start-button {
+			display: block;
+			height: auto;
+			width: auto;
+			max-width: none;
+			max-height: none;
+			image-rendering: pixelated;
+			user-select: none;
+		}
+
+		/* Softer glass taskbar */
+		#taskbar {
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+			height: 41px;
+			background: linear-gradient(rgba(255,255,255,0.20), rgba(255,255,255,0.05));
+			backdrop-filter: blur(3px) saturate(140%);
+			box-shadow:
+				inset 0 1px 0 rgba(255,255,255,0.25),
+				0 -4px 14px rgba(0,0,0,0.08);
+			z-index: 1;
+		}
+
+		#file-explorer-icon {
+			display: inline-block;
+			width: 25px;
+			height: 25px;
+			margin: 8px 10px 8px 14px;
+			background-image: url("./File Explorer.png");
+			background-size: cover;
+			cursor: pointer;
+		}
+		#context-menu {
+			position: fixed;
+			min-width: 220px;
+			background: linear-gradient(rgba(255,255,255,0.20), rgba(255,255,255,0.05));
+			border: 1px solid rgba(255,255,255,0.25);
+			border-radius: 12px;
+			backdrop-filter: blur(3px) saturate(140%);
+			box-shadow: inset 0 1px 0 rgba(255,255,255,0.0),
+			            0 8px 14px rgba(0,0,0,0.08);
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 160ms ease;
+			z-index: 999;
+			overflow: hidden;
+			padding: 2px;
+		}
+
+		#context-menu.show {
+			opacity: 1;
+			pointer-events: auto;
+		}
+
+		#context-menu.show::before {
+			content: '';
+			position: fixed;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0,0,0,0.15);
+			z-index: -1;
+		}
+
+		.context-item {
+			padding: 10px 16px;
+			font-family: "Segoe UI", system-ui, sans-serif;
+			font-size: 14px;
+			color: white;
+			cursor: pointer;
+			position: relative;
+			transition: background 120ms ease;
+		}
+
+		.context-item::before {
+			content: '';
+			position: absolute;
+			left: 4px;
+			top: 4px;
+			right: 4px;
+			bottom: 4px;
+			border-radius: 8px;
+			background: rgba(255,255,255,0.20);
+			opacity: 0;
+			transition: opacity 120ms ease;
+		}
+
+		.context-item:hover::before {
+			opacity: 1;
+		}
+
+		#context-menu.touch {
+			padding-top: 6px;
+			padding-bottom: 6px;
+		}
+
+		#context-menu.touch .context-item {
+			padding: 20px 16px;
+			font-size: 16px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="flyout"></div>
+
+	<div class="image-box">
+		<img id="start-button" src="./Start/Button/AN1.png" alt="Start">
+	</div>
+
+	<div id="taskbar">
+		<div id="file-explorer-icon" aria-label="File Explorer"></div>
+	</div>
+
+	<script>
+		const flyout = document.getElementById('flyout');
+
+		document.addEventListener('mousemove', function (e) {
+			const mouseX = e.clientX;
+			const mouseY = e.clientY;
+			const screenWidth = window.innerWidth;
+			const screenHeight = window.innerHeight;
+			const threshold = 6;
+
+			if (
+				(mouseX >= screenWidth - threshold && mouseY <= threshold) ||
+				(mouseX >= screenWidth - threshold && mouseY >= screenHeight - threshold)
+			) {
+				flyout.classList.add('show');
+			} else {
+				if (!isMouseOverElement(flyout, mouseX, mouseY)) {
+					flyout.classList.remove('show');
+				}
+			}
+		});
+
+		function isMouseOverElement(element, mouseX, mouseY) {
+			const rect = element.getBoundingClientRect();
+			return (
+				mouseX >= rect.left &&
+				mouseX <= rect.right &&
+				mouseY >= rect.top &&
+				mouseY <= rect.bottom
+			);
+		}
+	</script>
+
+	<script>
+		window.addEventListener("DOMContentLoaded", () => {
+			const startBtn = document.getElementById("start-button");
+			const imageBox = document.querySelector(".image-box");
+
+			let animFrame = 1;
+			let animInterval = null;
+			let firstFrameTimeout = null;
+			let animationPlayed = false;
+
+			const totalFrames = 10;
+			const firstFrameDelay = 180;
+			const frameSpeed = 120;
+
+			const handleClick = () => {
+				alert("Icon clicked!");
+			};
+
+			let clickAttached = false;
+
+			const playAnimation = () => {
+				if (animationPlayed) return;
+
+				animationPlayed = true;
+
+				firstFrameTimeout = setTimeout(() => {
+					firstFrameTimeout = null;
+
+					animInterval = setInterval(() => {
+						animFrame++;
+
+						if (animFrame > totalFrames) {
+							clearInterval(animInterval);
+							animInterval = null;
+							animFrame = totalFrames;
+							return;
+						}
+
+						startBtn.src = `./Start/Button/AN${animFrame}.png`;
+					}, frameSpeed);
+
+				}, firstFrameDelay);
+			};
+
+			const stopAnimation = () => {
+				clearInterval(animInterval);
+				clearTimeout(firstFrameTimeout);
+
+				animInterval = null;
+				firstFrameTimeout = null;
+				animFrame = 1;
+				animationPlayed = false;
+
+				startBtn.src = "./Start/Button/AN1.png";
+			};
+
+			const handleMouseMove = (event) => {
+				const x = event.clientX;
+				const y = event.clientY;
+				const height = window.innerHeight;
+				const threshold = 6;
+
+				const rect = imageBox.getBoundingClientRect();
+				const opacity = window.getComputedStyle(imageBox).getPropertyValue("opacity");
+
+				if (x <= threshold && y >= height - threshold && opacity === "0") {
+					imageBox.style.opacity = 1;
+					imageBox.style.cursor = "pointer";
+
+					playAnimation();
+					if (!clickAttached) {
+						startBtn.addEventListener("click", handleClick);
+						clickAttached = true;
+					}
+
+				} else if (!(x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)) {
+					imageBox.style.opacity = 0;
+					imageBox.style.cursor = "default";
+
+					stopAnimation();
+					startBtn.removeEventListener("click", handleClick);
+					clickAttached = false;
+				}
+			};
+
+			document.addEventListener("mousemove", handleMouseMove);
+		});
+	</script>
+</body>
+	<div id="context-menu">
+		<div class="context-item" data-action="refresh">Refresh</div>
+		<div class="context-item" data-action="settings">Settings</div>
+		<div class="context-item" data-action="about">About</div>
+	</div>
+
+	<script>
+		let touchTimer = null;
+		let touchStartX = 0;
+		let touchStartY = 0;
+
+		let openedByTouch = false;
+
+		const showContextMenu = (x, y, isTouch) => {
+			openedByTouch = isTouch;
+			contextMenu.classList.toggle("touch", isTouch);
+
+			const menuWidth = 220;
+			const menuHeight = contextMenu.offsetHeight || (isTouch ? 320 : 160);
+
+			if (x + menuWidth > window.innerWidth) {
+				x = window.innerWidth - menuWidth - 6;
+			}
+
+			if (y + menuHeight > window.innerHeight) {
+				y = window.innerHeight - menuHeight - 6;
+			}
+
+			contextMenu.style.left = x + "px";
+			contextMenu.style.top = y + "px";
+			contextMenu.classList.add("show");
+		};
+
+		document.addEventListener("contextmenu", (e) => {
+			e.preventDefault();
+			showContextMenu(e.clientX, e.clientY, false);
+		});
+
+		document.addEventListener("touchstart", (e) => {
+			if (e.touches.length !== 1) return;
+
+			const touch = e.touches[0];
+			touchStartX = touch.clientX;
+			touchStartY = touch.clientY;
+
+			touchTimer = setTimeout(() => {
+				showContextMenu(touchStartX, touchStartY, true);
+			}, 500); // 500ms hold
+		});
+
+		document.addEventListener("touchmove", (e) => {
+			const touch = e.touches[0];
+			if (!touch) return;
+
+			if (
+				Math.abs(touch.clientX - touchStartX) > 10 ||
+				Math.abs(touch.clientY - touchStartY) > 10
+			) {
+				clearTimeout(touchTimer);
+			}
+		});
+
+		document.addEventListener("touchend", () => {
+			clearTimeout(touchTimer);
+		});
+
+		const contextMenu = document.getElementById("context-menu");
+
+		document.addEventListener("click", (e) => {
+			if (openedByTouch) {
+				openedByTouch = false;
+				return; // ignore the synthetic click after touch
+			}
+			contextMenu.classList.remove("show");
+		});
+
+		contextMenu.addEventListener("click", (e) => {
+			const item = e.target.closest(".context-item");
+			if (!item) return;
+
+			const action = item.dataset.action;
+
+			switch (action) {
+				case "refresh":
+					location.reload();
+					break;
+				case "settings":
+					alert("Settings clicked");
+					break;
+				case "about":
+					alert("Windows 8 Aero Demo");
+					break;
+			}
+
+			contextMenu.classList.remove("show");
+		});
+	</script>
+</html>
