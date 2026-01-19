@@ -326,21 +326,33 @@
 			contextMenu.classList.add("show");
 		};
 
+		const contextMenu = document.getElementById("context-menu");
+
+		// Right-click handler
 		document.addEventListener("contextmenu", (e) => {
-			e.preventDefault();
-			showContextMenu(e.clientX, e.clientY, spaceTouch);
+		    // Ignore right-clicks inside the context menu
+		    if (e.target.closest("#context-menu")) {
+		        e.preventDefault();
+		        return;
+		    }
+		    e.preventDefault();
+		    showContextMenu(e.clientX, e.clientY, spaceTouch);
 		});
 
+		// Touch-hold handler
 		document.addEventListener("touchstart", (e) => {
-			if (e.touches.length !== 1) return;
+		    if (e.touches.length !== 1) return;
+		    const touch = e.touches[0];
 
-			const touch = e.touches[0];
-			touchStartX = touch.clientX;
-			touchStartY = touch.clientY;
+		    // Ignore touch-holds inside the context menu
+		    if (touch.target.closest("#context-menu")) return;
 
-			touchTimer = setTimeout(() => {
-				showContextMenu(touchStartX, touchStartY, true);
-			}, 500); // 500ms hold
+		    touchStartX = touch.clientX;
+		    touchStartY = touch.clientY;
+
+		    touchTimer = setTimeout(() => {
+		        showContextMenu(touchStartX, touchStartY, true);
+		    }, 500);
 		});
 
 		document.addEventListener("touchmove", (e) => {
@@ -372,8 +384,6 @@
 				document.body.classList.remove("finger-mode");
 			}
 		});
-
-		const contextMenu = document.getElementById("context-menu");
 
 		document.addEventListener("click", (e) => {
 			if (openedByTouch) {
